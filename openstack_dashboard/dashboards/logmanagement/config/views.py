@@ -25,7 +25,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.views import generic
 from django.conf import settings
 
-from horizon import forms
+from horizon import tables
 from horizon import views
 
 from openstack_dashboard.dashboards.logmanagement import util
