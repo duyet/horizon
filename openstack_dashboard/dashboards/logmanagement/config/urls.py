@@ -16,17 +16,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.utils.translation import ugettext_lazy as _
+from django.conf.urls import patterns
+from django.conf.urls import url
 
-import horizon
-
-from openstack_dashboard.dashboards.logmanagement import dashboard
+from openstack_dashboard.dashboards.logmanagement.config import views
 
 
-class LogStat(horizon.Panel):
-    name = _("Log Stat")
-    slug = 'stat'
-#    policy_rules = (("identity", "identity:list_projects"),
-#                    ("identity", "identity:list_user_projects"))
-
-dashboard.Logmanagement.register(LogStat)
+urlpatterns = patterns(
+    '',
+    url(r'^$', views.IndexView.as_view(), name='index'),
+)

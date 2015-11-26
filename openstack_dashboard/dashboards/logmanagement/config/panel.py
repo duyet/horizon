@@ -16,13 +16,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.conf.urls import patterns
-from django.conf.urls import url
+from django.utils.translation import ugettext_lazy as _
 
-from openstack_dashboard.dashboards.logmanagement.view import views
+import horizon
 
+from openstack_dashboard.dashboards.logmanagement import dashboard
 
-urlpatterns = patterns(
-    '',
-    url(r'^$', views.IndexView.as_view(), name='index'),
-)
+class LogManagerConfig(horizon.Panel):
+    name = _("Config")
+    slug = 'config'
+
+dashboard.Logmanagement.register(LogManagerConfig)
