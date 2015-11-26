@@ -51,21 +51,34 @@ class IndexView(tables.DataTableView):
     def has_more_data(self, table):
         return self._more
 
-    def get_openstack_resource_name(self, filename):
-        resouce_name = ''
+    def get_project_name_from_log_file(self, filename):
+        return filename
 
-        resouce_name = filename
+    def get_resource_name(self, filename):
+        filename = filename.replace('.log', '')
 
-        return resouce_name
+        filename = filename.replace('key', 'keystone')
+
+        resource_map = {
+            'n-': 'nova.',
+            'q-': 'neutron.',
+            'g-': 'glance.',
+            'c-': 'compu.'
+        }
+
+        for item in resource_map:
+            filename = filename.replace(item, resource_map[item])
+
+        return filename
 
     def replace_coloredlog_format(self, text):
         color = ['\033[95m', '\033[94m', '\033[92m', '\033[93m', '\033[91m', '\033[90m', '\033[0m', '\033[1m', '\033[4m']
         for c in color:
             text = text.replace(c, '')
 
-        if not color:
+        if not text:
             return ''
-        return str(color)
+        return str(text)
 
     def parse_log_from_file(self, filename, log_path = '/var/log/apache2/'):
         LogRow = namedtuple('logrow', 'timestamp message project resource pid id level')
@@ -78,6 +91,7 @@ class IndexView(tables.DataTableView):
 
                 OPENSTACK_TIMESTAMP = re.compile("\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\.[0-9]{6}")
                 OPENSTACK_PID = re.compile("\s([0-9]+)?\s")
+                OPENSTACK_RESOURCE = re.compile("\s([a-z\.]+)?\s")
                 OPENSTACK_LOGLEVEL = re.compile("([D|d]ebug|DEBUG|[N|n]otice|NOTICE|[I|i]nfo|INFO|[W|w]arn?(?:ing)?|WARN?(?:ING)?|[E|e]rr?(?:or)?|ERR?(?:OR)?|[C|c]rit?(?:ical)?|CRIT?(?:ICAL)?|[F|f]atal|FATAL|[S|s]evere|SEVERE|[A|a]udit|AUDIT)")
  
                 for i in range(min(10, len(data_line))):
@@ -86,16 +100,24 @@ class IndexView(tables.DataTableView):
                     _level = re.findall(OPENSTACK_LOGLEVEL, current_line)
                     _pid = re.findall(OPENSTACK_PID, current_line)
                     _timestamp = re.findall(OPENSTACK_TIMESTAMP, current_line)
+                    _resource = re.findall(OPENSTACK_RESOURCE, current_line)
                     
                     _message = current_line
 
                     if not _timestamp:
-                        break
+                        continue
+                    else:
+                        _message = _message.replace(_timestamp[0], '')
 
                     if not _level:
                         _level.append(None)
                     else:
                         _message = _message.replace(_level[0], '')
+
+                    if not _resource:
+                        _resource.append(None)
+                    else:
+                        _message = _message.replace(_resource[0], '')
                     
                     if not _pid:
                         _pid.append(None)
@@ -110,7 +132,7 @@ class IndexView(tables.DataTableView):
                         timestamp = _timestamp[0], 
                         level = _level[0], 
                         message = _message, 
-                        resource = self.get_openstack_resource_name(filename),
+                        resource = _resource[0], # self.get_resource_name(filename),
                         project = filename)
                     data_arr.append(current_dict)
         
@@ -123,8 +145,6 @@ class IndexView(tables.DataTableView):
         log_path = '/opt/stack/logs'
         for filename in os.listdir(log_path):
             if filename.endswith(".log"):
-
-                print "======================", filename
                 data_arr += self.parse_log_from_file(filename, log_path)
 
         return data_arr
