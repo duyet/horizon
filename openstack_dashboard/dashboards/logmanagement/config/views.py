@@ -26,6 +26,7 @@ from django.views import generic
 from django.conf import settings
 
 from horizon import tables
+from horizon import forms
 from horizon import views
 
 from openstack_dashboard.dashboards.logmanagement import util

@@ -1,25 +1,12 @@
-# Copyright 2012 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
-# All Rights Reserved.
-#
-# Copyright 2012 Nebula, Inc.
-#
-#    Licensed under the Apache License, Version 2.0 (the "License"); you may
-#    not use this file except in compliance with the License. You may obtain
-#    a copy of the License at
-#
-#         http://www.apache.org/licenses/LICENSE-2.0
-#
-#    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-#    License for the specific language governing permissions and limitations
-#    under the License.
-
-import time
 import re
 import fileinput
 import os
+import pandas as pd
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+
+import matplotlib.pyplot as plt
 from collections import namedtuple
 
 from django.core.urlresolvers import reverse
@@ -28,52 +15,39 @@ from django.views import generic
 from django.conf import settings
 
 from horizon import exceptions
-from horizon import messages
 from horizon import tables
 from horizon import views
-from horizon.utils import memoized
-from horizon import workflows
 
 from openstack_dashboard.dashboards.logmanagement import util
 
 from openstack_dashboard.dashboards.logmanagement.view \
     import tables as log_tables
 
-######################################
-# import pandas as pd
-# import numpy as np
-# import re
+islab_log_path = '/opt/stack/logs'
+with open(islab_log_path + '/horizon.log') as f:
+    islab_data = f.read()
 
-# import matplotlib
-# matplotlib.use('Agg')
-# import matplotlib.pyplot as plt
+islab_data_line = islab_data.split('\n')
+islab_data_arr = []
 
+for i in range(len(islab_data_line)):
+    _group = re.match("([A-Z]+)\:", islab_data_line[i][27:])
+    if  _group and _group.group(1):
+        islab_data_arr.append({'date': islab_data_line[i][0:10], 'time': islab_data_line[i][11:19], 'type': _group.group(1), 'content': islab_data_line[i][27:], 'count': 1})
+islab_data_frame = pd.DataFrame(data=islab_data_arr)
 
-# islab_log_path = getattr(settings, 'ROOT_PATH') + '/../../logs'
-# with open(islab_log_path + '/horizon.log') as f:
-#     islab_data = f.read()
+islab_data_frame_group = islab_data_frame.groupby(['date', 'type']).agg(np.sum)
 
-# islab_data_line = islab_data.split('\n')
-# islab_data_arr = []
+islab_data_frame_plot = islab_data_frame_group.unstack().plot(
+    kind='bar',
+    stacked=True,
+    layout=("Date", "Number"), 
+    figsize=(10, 5)
+)
+islab_data_frame_plot.legend(loc=1, borderaxespad=0.)
 
-# for i in range(len(islab_data_line)):
-#     _group = re.match("([A-Z]+)\:", islab_data_line[i][27:])
-#     if  _group and _group.group(1):
-#         islab_data_arr.append({'date': islab_data_line[i][0:10], 'time': islab_data_line[i][11:19], 'type': _group.group(1), 'content': islab_data_line[i][27:], 'count': 1})
-# islab_data_frame = pd.DataFrame(data=islab_data_arr)
-
-# islab_data_frame_group = islab_data_frame.groupby(['date', 'type']).agg(np.sum)
-
-# islab_data_frame_plot = islab_data_frame_group.unstack().plot(
-#     kind='bar',
-#     stacked=True,
-#     layout=("Date", "Number"), 
-#     figsize=(10, 5)
-# )
-# islab_data_frame_plot.legend(loc=1, borderaxespad=0.)
-
-# fig = islab_data_frame_plot.get_figure()
-# fig.savefig(getattr(settings, 'ROOT_PATH') + "/static/dashboard/img/horizon-admin-overview.png")
+fig = islab_data_frame_plot.get_figure()
+fig.savefig(getattr(settings, 'ROOT_PATH') + "/static/dashboard/logmanagement/horizon-logmanagement-stat.png")
 
 class IndexView(tables.DataTableView):
     template_name = 'logmanagement/view/index.html'
@@ -84,6 +58,20 @@ class IndexView(tables.DataTableView):
         return self._more
 
     def get_project_name_from_log_file(self, filename):
+        filename = filename.replace('.log', '')
+
+        resource_map = {
+            'n-': 'NOVA',
+            'q-': 'NEUTRON.',
+            'g-': 'GLANCE',
+            'c-': 'CINDER',
+            'ke': 'KEYSTONE'
+        }
+
+        for item in resource_map:
+            if item == filename[0:2]:
+                return resource_map[item]
+
         return filename
 
     def get_resource_name(self, filename):
@@ -95,7 +83,7 @@ class IndexView(tables.DataTableView):
             'n-': 'nova.',
             'q-': 'neutron.',
             'g-': 'glance.',
-            'c-': 'compu.'
+            'c-': 'cinder.'
         }
 
         for item in resource_map:
@@ -103,8 +91,10 @@ class IndexView(tables.DataTableView):
 
         return filename
 
+    # NOTE: Screen ubuntu create log file with color hex code. 
+    # This function will replace these charactor from log content.
     def replace_coloredlog_format(self, text):
-        color = ['\033[95m', '\033[94m', '\033[92m', '\033[93m', '\033[91m', '\033[90m', '\033[0m', '\033[1m', '\033[4m']
+        color = ['\033[95m', '\033[94m', '\033[92m', '\033[93m', '\033[91m', '\033[90m', '\033[0m', '\033[32m', '\033[1m', '\033[4m']
         for c in color:
             text = text.replace(c, '')
 
@@ -112,8 +102,8 @@ class IndexView(tables.DataTableView):
             return ''
         return str(text)
 
-    def parse_log_from_file(self, filename, log_path = '/var/log/apache2/'):
-        LogRow = namedtuple('logrow', 'timestamp message project resource pid id level')
+    def parse_log_from_file(self, filename, log_path = '/var/stack/logs/'):
+        LogRow = namedtuple('logrow', 'timestamp date message project resource pid id level')
         data_arr = []
         file_path = log_path + '/' + filename
         if os.path.isfile(file_path):
@@ -162,9 +152,10 @@ class IndexView(tables.DataTableView):
                         id = data_line[i][0:10], 
                         pid = _pid[0], 
                         timestamp = _timestamp[0], 
+                        date = get_date(_timestamp[0]),
                         level = _level[0], 
                         message = _message, 
-                        resource = _resource[0], # self.get_resource_name(filename),
+                        resource = _resource[0],
                         project = filename)
                     data_arr.append(current_dict)
         
@@ -180,5 +171,20 @@ class IndexView(tables.DataTableView):
         for filename in os.listdir(log_path):
             if filename.endswith(".log"):
                 data_arr += self.parse_log_from_file(filename, log_path)
+
+        islab_data_frame = pd.DataFrame(data=data_arr)
+        islab_data_frame_group = islab_data_frame.groupby(['level']).agg(np.sum)
+        islab_data_frame_plot = islab_data_frame_group.unstack().plot(
+            kind='bar',
+            stacked=True,
+            layout=("Date", "Number"), 
+            figsize=(10, 5)
+        )
+        islab_data_frame_plot.legend(loc=1, borderaxespad=0.)
+
+        fig = islab_data_frame_plot.get_figure()
+
+        # NOTE: Generate chart to images
+        fig.savefig(getattr(settings, 'ROOT_PATH') + "/static/dashboard/logmanagement/horizon-logmanagement-stat.png")
 
         return data_arr

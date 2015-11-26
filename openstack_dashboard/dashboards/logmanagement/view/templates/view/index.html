@@ -15,11 +15,9 @@
 
 $(document).ready(function() {
 	$('#datetimepicker1').datetimepicker({
-
     });
 
     $('#datetimepicker2').datetimepicker({
-
     });
 });
 </script>
@@ -73,7 +71,7 @@ $(document).ready(function() {
             <div class="form-group">
               <label class="col-md-4 control-label">Start</label>
               <div class="col-md-8">
-                <input id="datetimepicker2" data-format="dd/MM/yyyy hh:mm:ss" type="text" class="form-control" />
+                <input id="datetimepicker2" data-format="dd/MM/yyyy hh:mm:ss" type="datetime" class="form-control" />
               </div>
             </div>
         </div>
@@ -85,8 +83,8 @@ $(document).ready(function() {
 
 <div class="container-fluid">
     <div class="row">
-        <div class="col-md-10">
-            {% include 'logmanagement/view/chart.html' %}
+        <div class="col-md-8">
+            {% include 'logmanagement/view/chart-pandas.html' %}
         </div>
     </div>
 </div>
