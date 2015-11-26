@@ -45,6 +45,7 @@ class DeleteLog(tables.DeleteAction):
         )
 
     def delete(self, request, obj_id):
+        # TODO: Remove log by line number and filename
         pass
 
 

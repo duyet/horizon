@@ -23,6 +23,13 @@ from openstack_dashboard.dashboards.logmanagement import util
 from openstack_dashboard.dashboards.logmanagement.view \
     import tables as log_tables
 
+# Regex 
+OPENSTACK_TIMESTAMP = re.compile("\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\.[0-9]{6}")
+OPENSTACK_PID = re.compile("\s([0-9]+)?\s")
+OPENSTACK_RESOURCE = re.compile("\s([a-z\.]+)?\s")
+OPENSTACK_LOGLEVEL = re.compile("([D|d]ebug|DEBUG|[N|n]otice|NOTICE|[I|i]nfo|INFO|[W|w]arn?(?:ing)?|WARN?(?:ING)?|[E|e]rr?(?:or)?|ERR?(?:OR)?|[C|c]rit?(?:ical)?|CRIT?(?:ICAL)?|[F|f]atal|FATAL|[S|s]evere|SEVERE|[A|a]udit|AUDIT)")
+
+
 class IndexView(tables.DataTableView):
     template_name = 'logmanagement/view/index.html'
     page_title = _("Log Viewer")
@@ -80,37 +87,41 @@ class IndexView(tables.DataTableView):
     def get_date(self, datestring):
         return datestring[:10]
 
-    def repair_data_for_pandas_chart(self):
-        pass
-
     def render_pandas_chart(self):
-        log_path = '/opt/logs/'
-        with open(log_path + '/key.log') as f:
-            data = f.read()
+        log_path = '/opt/stack/logs/'
+        file_path = log_path + 'key.log'
 
-        data_line = data.split('\n')
-        data_arr = []
+        if os.path.isfile(file_path):
+            with open(file_path) as f:
+                data = f.read()
 
-        for i in range(len(data_line)):
-            _group = re.match("([A-Z]+)\:", data_line[i][27:])
-            if  _group and _group.group(1):
-                data_arr.append({'date': data_line[i][0:10], 'time': data_line[i][11:19], 'level': _group.group(1), 'content': data_line[i][27:], 'count': 1})
-        data_frame = pd.DataFrame(data=data_arr)
+            data_line = data.split('\n')
+            data_arr = []
 
-        ## Render stat chart
-        data_frame = pd.DataFrame(data=data_arr)
-        data_frame_group = data_frame.groupby(['date','level']).agg(np.sum)
-        data_frame_plot = data_frame_group.unstack().plot(
-            kind='bar',
-            stacked=True,
-            #layout=("Date", "Number"), 
-            figsize=(10, 5)
-        )
-        data_frame_plot.legend(loc=1, borderaxespad=0.)
-        fig = data_frame_plot.get_figure()
+            for i in range(len(data_line)):
+                _timestamp = re.findall(OPENSTACK_TIMESTAMP, data_line[i])
+                _level = re.findall(OPENSTACK_LOGLEVEL, data_line[i])
 
-        # NOTE: Generate chart to images
-        fig.savefig(getattr(settings, 'ROOT_PATH') + "/static/dashboard/logmanagement/horizon-logmanagement-stat.png")
+                if not _timestamp or not _level:
+                    continue
+                else:
+                    data_arr.append({'date': self.get_date(_timestamp[0]), 'level': _level[0], 'count': 1})
+            data_frame = pd.DataFrame(data=data_arr)
+
+            ## Render stat chart
+            data_frame = pd.DataFrame(data=data_arr)
+            data_frame_group = data_frame.groupby(['date','level']).agg(np.sum)
+            data_frame_plot = data_frame_group.unstack().plot(
+                kind='bar',
+                stacked=True,
+                #layout=("Date", "Number"), 
+                figsize=(10, 5)
+            )
+            data_frame_plot.legend(loc=1, borderaxespad=0.)
+            fig = data_frame_plot.get_figure()
+
+            # NOTE: Generate chart to images
+            fig.savefig(getattr(settings, 'ROOT_PATH') + "/static/dashboard/logmanagement/horizon-logmanagement-stat.png")
 
 
 
@@ -123,11 +134,6 @@ class IndexView(tables.DataTableView):
                 log_data = f.read()
                 data_line = log_data.split('\n')
 
-                OPENSTACK_TIMESTAMP = re.compile("\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\.[0-9]{6}")
-                OPENSTACK_PID = re.compile("\s([0-9]+)?\s")
-                OPENSTACK_RESOURCE = re.compile("\s([a-z\.]+)?\s")
-                OPENSTACK_LOGLEVEL = re.compile("([D|d]ebug|DEBUG|[N|n]otice|NOTICE|[I|i]nfo|INFO|[W|w]arn?(?:ing)?|WARN?(?:ING)?|[E|e]rr?(?:or)?|ERR?(?:OR)?|[C|c]rit?(?:ical)?|CRIT?(?:ICAL)?|[F|f]atal|FATAL|[S|s]evere|SEVERE|[A|a]udit|AUDIT)")
- 
                 for i in range(min(10, len(data_line))):
                     current_line = self.replace_coloredlog_format(data_line[i])
 
@@ -184,5 +190,8 @@ class IndexView(tables.DataTableView):
         for filename in os.listdir(log_path):
             if filename.endswith(".log"):
                 data_arr += self.parse_log_from_file(filename, log_path)
+
+        # Render pandas chart
+        self.render_pandas_chart()
 
         return data_arr
