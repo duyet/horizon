@@ -4,20 +4,15 @@
 
 {% block main %}
 
-<link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.37/css/bootstrap-datetimepicker.min.css">
-
-<script type="text/javascript" src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.2/js/bootstrap.min.js"></script>
-<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.10.6/moment.min.js"></script>
-<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-alpha/js/bootstrap.min.js"></script>
-<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.37/js/bootstrap-datetimepicker.min.js"></script>
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}dashboard/logmanagement/bootstrap-datetimepicker/css/bootstrap-datetimepicker.min.css">
+<script type="text/javascript" src="{{ STATIC_URL }}dashboard/logmanagement/moment.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_URL }}dashboard/logmanagement/bootstrap-datetimepicker/js/bootstrap-datetimepicker.min.js"></script>
 
 <script type="text/javascript">
 
 $(document).ready(function() {
-	$('#datetimepicker1').datetimepicker({
-    });
-
-    $('#datetimepicker2').datetimepicker({
+    $('#start_date, #end_date').datetimepicker({
+        format: 'dd/MM/yyyy hh:mm:ss'
     });
 });
 </script>
@@ -63,7 +58,7 @@ $(document).ready(function() {
             <div class="form-group">
               <label class="col-md-4 control-label">Start</label>
               <div class="col-md-8">
-                <input id="datetimepicker1" data-format="dd/MM/yyyy hh:mm:ss" type="text" class="form-control" />
+                <input id="start_date" data-format="dd/MM/yyyy hh:mm:ss" type="text" class="form-control" />
               </div>
             </div>
         </div>
@@ -71,7 +66,7 @@ $(document).ready(function() {
             <div class="form-group">
               <label class="col-md-4 control-label">Start</label>
               <div class="col-md-8">
-                <input id="datetimepicker2" data-format="dd/MM/yyyy hh:mm:ss" type="datetime" class="form-control" />
+                <input id="end_date" data-format="dd/MM/yyyy hh:mm:ss" data-action="showSeconds" type="datetime" class="form-control" />
               </div>
             </div>
         </div>

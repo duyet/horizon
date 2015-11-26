@@ -23,32 +23,6 @@ from openstack_dashboard.dashboards.logmanagement import util
 from openstack_dashboard.dashboards.logmanagement.view \
     import tables as log_tables
 
-islab_log_path = '/opt/stack/logs'
-with open(islab_log_path + '/horizon.log') as f:
-    islab_data = f.read()
-
-islab_data_line = islab_data.split('\n')
-islab_data_arr = []
-
-for i in range(len(islab_data_line)):
-    _group = re.match("([A-Z]+)\:", islab_data_line[i][27:])
-    if  _group and _group.group(1):
-        islab_data_arr.append({'date': islab_data_line[i][0:10], 'time': islab_data_line[i][11:19], 'type': _group.group(1), 'content': islab_data_line[i][27:], 'count': 1})
-islab_data_frame = pd.DataFrame(data=islab_data_arr)
-
-islab_data_frame_group = islab_data_frame.groupby(['date', 'type']).agg(np.sum)
-
-islab_data_frame_plot = islab_data_frame_group.unstack().plot(
-    kind='bar',
-    stacked=True,
-    layout=("Date", "Number"), 
-    figsize=(10, 5)
-)
-islab_data_frame_plot.legend(loc=1, borderaxespad=0.)
-
-fig = islab_data_frame_plot.get_figure()
-fig.savefig(getattr(settings, 'ROOT_PATH') + "/static/dashboard/logmanagement/horizon-logmanagement-stat.png")
-
 class IndexView(tables.DataTableView):
     template_name = 'logmanagement/view/index.html'
     page_title = _("Log Viewer")
@@ -102,6 +76,44 @@ class IndexView(tables.DataTableView):
             return ''
         return str(text)
 
+
+    def get_date(self, datestring):
+        return datestring[:10]
+
+    def repair_data_for_pandas_chart(self):
+        pass
+
+    def render_pandas_chart(self):
+        log_path = '/opt/logs/'
+        with open(log_path + '/key.log') as f:
+            data = f.read()
+
+        data_line = data.split('\n')
+        data_arr = []
+
+        for i in range(len(data_line)):
+            _group = re.match("([A-Z]+)\:", data_line[i][27:])
+            if  _group and _group.group(1):
+                data_arr.append({'date': data_line[i][0:10], 'time': data_line[i][11:19], 'level': _group.group(1), 'content': data_line[i][27:], 'count': 1})
+        data_frame = pd.DataFrame(data=data_arr)
+
+        ## Render stat chart
+        data_frame = pd.DataFrame(data=data_arr)
+        data_frame_group = data_frame.groupby(['date','level']).agg(np.sum)
+        data_frame_plot = data_frame_group.unstack().plot(
+            kind='bar',
+            stacked=True,
+            #layout=("Date", "Number"), 
+            figsize=(10, 5)
+        )
+        data_frame_plot.legend(loc=1, borderaxespad=0.)
+        fig = data_frame_plot.get_figure()
+
+        # NOTE: Generate chart to images
+        fig.savefig(getattr(settings, 'ROOT_PATH') + "/static/dashboard/logmanagement/horizon-logmanagement-stat.png")
+
+
+
     def parse_log_from_file(self, filename, log_path = '/var/stack/logs/'):
         LogRow = namedtuple('logrow', 'timestamp date message project resource pid id level')
         data_arr = []
@@ -127,6 +139,7 @@ class IndexView(tables.DataTableView):
                     _message = current_line
 
                     if not _timestamp:
+                        # Skip if not in log line
                         continue
                     else:
                         _message = _message.replace(_timestamp[0], '')
@@ -152,11 +165,11 @@ class IndexView(tables.DataTableView):
                         id = data_line[i][0:10], 
                         pid = _pid[0], 
                         timestamp = _timestamp[0], 
-                        date = get_date(_timestamp[0]),
+                        date = self.get_date(_timestamp[0]),
                         level = _level[0], 
                         message = _message, 
                         resource = _resource[0],
-                        project = filename)
+                        project = self.get_project_name_from_log_file(filename))
                     data_arr.append(current_dict)
         
         return data_arr
@@ -171,20 +184,5 @@ class IndexView(tables.DataTableView):
         for filename in os.listdir(log_path):
             if filename.endswith(".log"):
                 data_arr += self.parse_log_from_file(filename, log_path)
-
-        islab_data_frame = pd.DataFrame(data=data_arr)
-        islab_data_frame_group = islab_data_frame.groupby(['level']).agg(np.sum)
-        islab_data_frame_plot = islab_data_frame_group.unstack().plot(
-            kind='bar',
-            stacked=True,
-            layout=("Date", "Number"), 
-            figsize=(10, 5)
-        )
-        islab_data_frame_plot.legend(loc=1, borderaxespad=0.)
-
-        fig = islab_data_frame_plot.get_figure()
-
-        # NOTE: Generate chart to images
-        fig.savefig(getattr(settings, 'ROOT_PATH') + "/static/dashboard/logmanagement/horizon-logmanagement-stat.png")
 
         return data_arr
