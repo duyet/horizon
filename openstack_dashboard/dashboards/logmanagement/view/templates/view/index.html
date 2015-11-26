@@ -1,8 +1,95 @@
 {% extends 'base.html' %}
 {% load i18n %}
-{% block title %}{% trans "Log" %}{% endblock %}
+{% block title %}{% trans "Log View" %}{% endblock %}
 
 {% block main %}
+
+<link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.37/css/bootstrap-datetimepicker.min.css">
+
+<script type="text/javascript" src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.2/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.10.6/moment.min.js"></script>
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-alpha/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.37/js/bootstrap-datetimepicker.min.js"></script>
+
+<script type="text/javascript">
+
+$(document).ready(function() {
+	$('#datetimepicker1').datetimepicker({
+
+    });
+
+    $('#datetimepicker2').datetimepicker({
+
+    });
+});
+</script>
+
+<div class="container-fluid">
+    <div class="row" style="margin-bottom: 10px">
+        <div class="col-md-5">
+            <div class="form-group">
+              <label class="col-md-4 control-label" for="selectbasic">Project</label>
+              <div class="col-md-8">
+                <select id="project" name="project_choose" class="form-control">
+                    <option>Nova</option>
+                    <option>Glance</option>
+                    <option>NeuTron</option>
+                    <option>Keystone</option>
+                </select>
+              </div>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="form-group">
+              <label class="col-md-4 control-label">Level</label>
+              <div class="col-md-8">
+                <select id="level" name="level_choose" class="form-control">>
+                        <option>ALL</option>
+                        <option>ERROR</option>
+                        <option>INFO</option>
+                        <option>WARN</option>
+                        <option>DEBUG</option>
+                    </select>
+              </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-default">Filter</button>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-5">
+            <div class="form-group">
+              <label class="col-md-4 control-label">Start</label>
+              <div class="col-md-8">
+                <input id="datetimepicker1" data-format="dd/MM/yyyy hh:mm:ss" type="text" class="form-control" />
+              </div>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="form-group">
+              <label class="col-md-4 control-label">Start</label>
+              <div class="col-md-8">
+                <input id="datetimepicker2" data-format="dd/MM/yyyy hh:mm:ss" type="text" class="form-control" />
+              </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-default">Refresh</button>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-10">
+            {% include 'logmanagement/view/chart.html' %}
+        </div>
+    </div>
+</div>
 
  {{ table.render }}
 

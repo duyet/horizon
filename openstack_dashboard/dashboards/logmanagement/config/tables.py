@@ -27,7 +27,6 @@ from keystoneclient.exceptions import Conflict  # noqa
 from openstack_dashboard import api
 from openstack_dashboard import policy
 
-
 class LogTable(tables.DataTable):
     timestamp =  tables.Column("timestamp", verbose_name=_("timestamp"))
     pid =  tables.Column("pid", verbose_name=_("pid"))

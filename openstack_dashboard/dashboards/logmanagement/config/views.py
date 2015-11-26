@@ -25,18 +25,10 @@ from django.utils.translation import ugettext_lazy as _
 from django.views import generic
 from django.conf import settings
 
-from horizon import exceptions
-from horizon import messages
-from horizon import tables
+from horizon import forms
 from horizon import views
-from horizon.utils import memoized
-from horizon import workflows
 
-from openstack_dashboard import api
-from openstack_dashboard.api import keystone
-from openstack_dashboard import policy
-from openstack_dashboard import usage
-from openstack_dashboard.usage import quotas
+from openstack_dashboard.dashboards.logmanagement import util
 
 class IndexView(views.HorizonTemplateView):
     template_name = 'logmanagement/config/index.html'

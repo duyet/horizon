@@ -27,6 +27,26 @@ from keystoneclient.exceptions import Conflict  # noqa
 from openstack_dashboard import api
 from openstack_dashboard import policy
 
+class DeleteLog(tables.DeleteAction):
+    @staticmethod
+    def action_present(count):
+        return ungettext_lazy(
+            u"Delete Log",
+            u"Delete Logs",
+            count
+        )
+
+    @staticmethod
+    def action_past(count):
+        return ungettext_lazy(
+            u"Deleted Log",
+            u"Deleted Logs",
+            count
+        )
+
+    def delete(self, request, obj_id):
+        pass
+
 
 class LogTable(tables.DataTable):
     timestamp =  tables.Column("timestamp", verbose_name=_("timestamp"))
@@ -38,3 +58,6 @@ class LogTable(tables.DataTable):
     class Meta(object):
         name = "LogTable"
         verbose_name = _("LogTable")
+        ajax = True
+
+        table_actions = (DeleteLog, )
